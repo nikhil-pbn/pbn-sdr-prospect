@@ -1,0 +1,50 @@
+/**
+ * Palette and layout constants for the public prospect page, taken from the
+ * supplied template: a lavender hero, navy and purple bands, pastel tiles.
+ *
+ * Deliberately scoped to `.prospect-theme` rather than `:root` so it cannot
+ * affect the internal tool (the builder, the editor's chrome). Everything that
+ * opts in reads these through `var(--prospect-*)`.
+ */
+.prospect-theme {
+  /* Brand */
+  --prospect-navy: #1b2a55;
+  --prospect-navy-deep: #101d4d;
+  --prospect-purple: #5750e5;
+  --prospect-purple-hover: #453ed6;
+  /* Section-card headers alternate down the page: navy first, then purple. */
+  --prospect-header-purple: #5750e5;
+  --prospect-header-navy: #191e4a;
+
+  /* Surfaces */
+  --prospect-page: #ffffff;
+  --prospect-hero: #f1f1fb;
+  --prospect-band: #f6f6ff;
+  --prospect-card: #ffffff;
+  --prospect-border: #cfccef;
+
+  /* Pastel tiles, as in the template's collage, steps and mosaic */
+  --prospect-tile-lavender: #f7edfd;
+  --prospect-tile-yellow: #fdf0c4;
+  --prospect-tile-green: #e4f3e3;
+  --prospect-tile-blue: #e2f0fb;
+  /* The marker behind a quote's key phrase */
+  --prospect-highlight: #fff0a3;
+
+  /* Text */
+  --prospect-text: #1f2233;
+  --prospect-text-muted: #5a6079;
+  --prospect-text-faint: #9aa3bf;
+  --prospect-on-dark: #ffffff;
+  --prospect-on-dark-muted: #d6d9f2;
+
+  /* Status */
+  --prospect-success: #1f9d68;
+  --prospect-danger: #e5484d;
+
+  color: var(--prospect-text);
+  background-color: var(--prospect-page);
+  /* Google Sans Flex for everything on the page; quotes opt into Lora via font-quote. */
+  font-family:
+    var(--font-google-sans-flex), ui-sans-serif, system-ui, sans-serif;
+}

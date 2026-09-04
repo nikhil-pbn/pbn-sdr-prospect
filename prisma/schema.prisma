@@ -1,0 +1,298 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// One predefined block of prospect-page content. Written by the seed, read by
+/// every prospect that selects the category or pain point mapped to it — the
+/// content lives HERE, once, and prospects reference it rather than copying it.
+///
+/// `content` is structured JSON, never HTML, and its shape is enforced by
+/// `sectionContentSchema` (src/types/section-content.ts) on every read and write.
+///
+/// No `sortOrder` on purpose: order is a property of what the SDR selects, so it
+/// lives on Category and PainPoint. A second copy here could only disagree.
+model Section {
+  id      String      @id @default(uuid()) @db.Uuid
+  /// Which kind of selectable this answers. Informational — the mapping itself
+  /// is the foreign key on Category / PainPoint.
+  type    SectionType
+  /// Stable seed key, e.g. "category:pbn-voice". Unique so the seed can upsert.
+  key     String      @unique @db.VarChar(255)
+  content Json        @db.JsonB
+  active  Boolean     @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  category  Category?
+  painPoint PainPoint?
+
+  @@map("sections")
+}
+
+/// A PbN solution the SDR can select. Exactly one Section answers it.
+model Category {
+  id        String  @id @default(uuid()) @db.Uuid
+  slug      String  @unique @db.VarChar(100)
+  name      String  @db.VarChar(255)
+  /// The ONLY source of rendered order. Explicit, never insertion order.
+  sortOrder Int     @map("sort_order")
+  active    Boolean @default(true)
+
+  sectionId String  @unique @map("section_id") @db.Uuid
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  prospects ProspectCategory[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([active, sortOrder])
+  @@map("categories")
+}
+
+/// A problem the SDR can select. Exactly one Section answers it.
+model PainPoint {
+  id        String  @id @default(uuid()) @db.Uuid
+  slug      String  @unique @db.VarChar(100)
+  name      String  @db.VarChar(255)
+  sortOrder Int     @map("sort_order")
+  active    Boolean @default(true)
+
+  sectionId String  @unique @map("section_id") @db.Uuid
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  prospects ProspectPainPoint[]
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([active, sortOrder])
+  @@map("pain_points")
+}
+
+/// One generated prospect page. Holds only what varies per prospect: who it is
+/// for, who made it, what was selected, and the CTA (the one editable block).
+/// Everything else on the page is static content or a referenced Section.
+model Prospect {
+  id   String @id @default(uuid()) @db.Uuid
+  /// Public URL segment, e.g. "prospect-priya-patel-k7m2xq". Unique so /[slug]
+  /// resolves to exactly one prospect. The prefix is required — it is what tells
+  /// the root route a path is a prospect.
+  slug String @unique @db.VarChar(255)
+
+  /// The SDR. Set from the SESSION at creation, never from the form — this is
+  /// the access key for every later edit and the calendar the page books into.
+  ownerEmail String @map("owner_email") @db.VarChar(255)
+  ownerName  String @map("owner_name") @db.VarChar(255)
+
+  /// The person the SDR spoke with — who the page is addressed to.
+  name  String @db.VarChar(255)
+  email String @db.VarChar(255)
+  /// The prospect's role at the practice — "Office manager", "Dentist / owner".
+  /// Optional on the form; the lists and analytics show it. Null is normal.
+  prospectRole String? @map("prospect_role") @db.VarChar(255)
+
+  /// Category OR PainPoint. Which of the two join tables below is populated.
+  mode   SelectionMode
+  status ProspectStatus @default(Draft)
+
+  /// The CTA block — the only content an SDR may edit in V1. Seeded from the
+  /// defaults and the SDR's calendar link at creation.
+  ctaTitle       String @map("cta_title") @db.VarChar(255)
+  ctaDescription String @map("cta_description") @db.VarChar(1000)
+  ctaButtonText  String @map("cta_button_text") @db.VarChar(100)
+  ctaUrl         String @map("cta_url") @db.VarChar(500)
+
+  /// Bumped on every save, so a stale editor tab can be detected later.
+  version     Int       @default(1)
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(3)
+
+  /// When a human confirmed the tracking entry. The prospect_tracking row is
+  /// created at generation and merely UPDATED on confirmation, so without this
+  /// stamp a confirmed entry is indistinguishable from an untouched one — and
+  /// the dialog that forces the step exists precisely to guarantee it happened.
+  trackingConfirmedAt DateTime? @map("tracking_confirmed_at") @db.Timestamptz(3)
+
+  /// The HubSpot contact this prospect belongs to — the record id parsed from the
+  /// URL the SDR pastes on the form, or into the dialog after publishing. Null
+  /// when they gave none, which is normal: the dialog then asks for one.
+  hubspotContactId String?           @map("hubspot_contact_id") @db.VarChar(64)
+  /// Whether the published link has been written to that contact. NotAdded
+  /// covers both "nobody has been asked yet" and "the SDR said no" — neither is
+  /// a failure.
+  hubspotStatus    HubspotSyncStatus @default(NotAdded) @map("hubspot_status")
+  hubspotSyncedAt  DateTime?         @map("hubspot_synced_at") @db.Timestamptz(3)
+  /// Why the last attempt failed, kept because the dialog that reported it is
+  /// gone the moment it closes.
+  hubspotError     String?           @map("hubspot_error") @db.VarChar(500)
+
+  /// When a visitor last opened the public page. Denormalised from the analytics
+  /// events purely so a listing can show it without aggregating: the events stay
+  /// the source of truth, and this is rebuildable from them at any time. Null
+  /// means nobody has opened it — which for a published prospect is itself the
+  /// finding.
+  lastViewedAt DateTime? @map("last_viewed_at") @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  categories ProspectCategory[]
+  painPoints ProspectPainPoint[]
+
+  @@index([ownerEmail])
+  @@index([status, createdAt(sort: Desc)])
+  @@map("prospects")
+}
+
+/// The SDR tracking log. Written once per successful generation and confirmed
+/// (updated in place) when the prospect is published, so it stays one row per
+/// prospect. Deliberately has no foreign key to prospects — it must survive a
+/// prospect being removed, otherwise the log develops holes precisely where
+/// someone cleaned up.
+model ProspectTracking {
+  id            String   @id @default(uuid()) @db.Uuid
+  /// The SDR credited — the owner's name from the session, correctable in the dialog.
+  sdrName       String   @map("sdr_name") @db.VarChar(255)
+  prospectName  String   @map("prospect_name") @db.VarChar(255)
+  prospectEmail String   @map("prospect_email") @db.VarChar(255)
+  prospectUrl   String   @map("prospect_url") @db.VarChar(500)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([sdrName])
+  @@map("prospect_tracking")
+}
+
+/// One visit to a public prospect page — everything that visitor did, on a single row.
+///
+/// Only anonymous visitors are ever recorded. If a request carries a staff session
+/// the event is refused outright rather than stored and filtered later: an SDR
+/// opening their own page to check it must leave no trace at all, and a rule
+/// enforced at the door cannot be forgotten by a query written months from now.
+///
+/// A row per VISIT, not per event and not per visitor-forever. Per event meant a
+/// refresh and every 20-second heartbeat each cost a row; a single permanent row
+/// per visitor would carry only one timestamp, and the dashboard's date filter
+/// could no longer say truthfully what happened last week. A visit is an actual
+/// moment, so every preset stays exact, and "average time per visit" is simply
+/// the row count as the divisor.
+///
+/// Only `prospectId` is stored, never the SDR or the role: `prospectRole` is
+/// editable, so a copy would freeze the old spelling. Both are joined from
+/// `prospects` at query time.
+model ProspectAnalyticsEvent {
+  id String @id @default(uuid()) @db.Uuid
+  /// No foreign key, deliberately — the same choice `prospect_tracking` makes, so
+  /// an engagement history is never destroyed by a row being removed. Analytics
+  /// reads exclude events whose prospect is not in `prospects`.
+  prospectId String @map("prospect_id") @db.Uuid
+
+  /// Anonymous, first-party, from an httpOnly cookie this server issued. One
+  /// browser profile = one id, for a year. Never derived from IP or a fingerprint,
+  /// and it identifies nobody: it exists only so a refresh is not a new person.
+  visitorId String @map("visitor_id") @db.Uuid
+
+  /// The visit itself, expiring after 30 idle minutes. One row per value of this,
+  /// per prospect — which is what makes a row "one user came".
+  sessionId String @map("session_id") @db.Uuid
+
+  /// Page opens during this visit. Starts at 1 and increments on every reload, so
+  /// refreshing raises views while unique views stay put.
+  views Int @default(0)
+
+  /// Active milliseconds accumulated from the heartbeats, added atomically. Time
+  /// with the tab hidden is never sent, so this is reading time, not tab-open time.
+  activeMs Int @default(0) @map("active_ms")
+
+  /// Every CTA clicked during the visit:
+  /// `[{ "a": "Book a Demo", "t": "2026-09-04T07:42:35.286Z" }, ...]`.
+  /// Appended with `actions || …` in one statement, so a burst of clicks cannot
+  /// race the way a read-modify-write would. Labels are short and opaque — never
+  /// a URL and never anything about the person clicking.
+  actions     Json? @db.JsonB
+  /// Highest heartbeat stamp already applied, so a replayed or duplicated beacon
+  /// is a no-op instead of double-counted time.
+  lastBeatSeq Int   @default(0) @map("last_beat_seq")
+
+  /// When the visitor closed the page, from the `pagehide` beacon. Null while the
+  /// page is still open — which is exactly what "active now" tests. Cleared again
+  /// by any later activity.
+  closedAt DateTime? @map("closed_at") @db.Timestamptz(3)
+
+  /// When the visit began. This is what the date filter buckets on.
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Last sign of life in the visit — the freshest activity, for "last viewed".
+  lastSeenAt DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(3)
+
+  /// One row per visit, and the upsert target for every kind of activity.
+  /// `prospectId` is part of the key and must stay: the session cookie outlives a
+  /// page, so one visitor opening TWO prospects inside the 30-minute window would
+  /// otherwise share a row and blend both prospects' numbers together.
+  @@unique([sessionId, prospectId])
+  /// Every per-prospect panel filters by prospect and a date range.
+  @@index([prospectId, createdAt])
+  /// The dashboard's own axis: totals and buckets across all prospects.
+  @@index([createdAt])
+  /// Unique views — count(distinct visitor_id) per prospect.
+  @@index([visitorId, prospectId])
+  /// "Active now" reads only this column, every 15 seconds, forever.
+  @@index([lastSeenAt])
+  @@map("prospect_analytics_events")
+}
+
+/// What the SDR ticked, kept so analytics and editing know how a prospect was
+/// built. Cascades with the prospect; a Category cannot be deleted while any
+/// prospect references it (deactivate it instead).
+model ProspectCategory {
+  prospectId String   @map("prospect_id") @db.Uuid
+  categoryId String   @map("category_id") @db.Uuid
+  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([prospectId, categoryId])
+  @@index([categoryId])
+  @@map("prospect_categories")
+}
+
+model ProspectPainPoint {
+  prospectId  String    @map("prospect_id") @db.Uuid
+  painPointId String    @map("pain_point_id") @db.Uuid
+  prospect    Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  painPoint   PainPoint @relation(fields: [painPointId], references: [id])
+
+  @@id([prospectId, painPointId])
+  @@index([painPointId])
+  @@map("prospect_pain_points")
+}
+
+enum SectionType {
+  Category
+  PainPoint
+}
+
+enum SelectionMode {
+  Category
+  PainPoint
+}
+
+enum ProspectStatus {
+  Draft
+  Published
+}
+
+/// Whether a published prospect's link reached its HubSpot contact.
+///
+/// Three states, and the distinction between the first two is the point: an SDR
+/// who declines the offer has done nothing wrong, so declining must not look
+/// like a broken integration when someone reads this column later.
+enum HubspotSyncStatus {
+  NotAdded
+  Added
+  Failed
+}

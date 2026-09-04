@@ -1,0 +1,47 @@
+# Local Postgres for development. Same approach as PbN Proposals, but its OWN
+# container, port, database and volume, so the two tools never share state and
+# either can be reset without touching the other.
+#
+#   npm run db:up     start it (the first run downloads the image, ~150 MB)
+#   npm run db:down   stop it, KEEPING the data
+#   npm run db:logs   tail the server log
+#
+# The data lives in the `pgdata` volume (namespaced by this folder's name), not
+# in the container. Only `docker compose down -v` destroys it, which is why no
+# script in package.json passes -v.
+services:
+  db:
+    # Pinned to the major version Proposals runs, so dumps move between the two.
+    image: postgres:18
+    container_name: pbn-prospects-postgres
+    restart: unless-stopped
+    environment:
+      # Read by the image's entrypoint on FIRST boot only — initdb runs once, on
+      # an empty volume. Editing these later does nothing until the volume is
+      # deleted; change credentials with ALTER USER instead.
+      POSTGRES_USER: pbn
+      POSTGRES_PASSWORD: pbn_local_dev
+      POSTGRES_DB: pbn_prospects
+    ports:
+      # Loopback-bound on purpose: a plain "15433:5432" would publish a database
+      # with a dev password on every interface the laptop is on.
+      #
+      # 15433, not 15432: Proposals' container holds 15432. Not 5432/5433 either —
+      # this machine runs native Postgres services on both. And kept below 49152,
+      # the start of the range Windows hands out as ephemeral source ports, where
+      # any outbound connection could take the port before Docker publishes it.
+      - "127.0.0.1:15433:5432"
+    volumes:
+      # /var/lib/postgresql, NOT /var/lib/postgresql/data: the 18 image keeps
+      # major-version subdirectories under a single mount and refuses the old path.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      # `db:up` waits on this, so migrations can't run against a server that has
+      # accepted the TCP connection but is still starting up.
+      test: ["CMD-SHELL", "pg_isready -U pbn -d pbn_prospects"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  pgdata:

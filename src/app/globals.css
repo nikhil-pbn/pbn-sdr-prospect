@@ -1,26 +1,39 @@
+/* All @import statements must stay at the top — CSS requires it, and Tailwind
+   inlines them before processing @theme. Token values are split out by mode; the
+   Tailwind theme mapping lives in theme.css. Same structure as PbN Proposals, so
+   the two internal tools look like one product. */
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "./styles/theme.css";
+@import "./styles/tokens-light.css";
+@import "./styles/tokens-dark.css";
+/* Scoped to .prospect-theme — the public prospect page only; cannot affect the internal tool. */
+@import "./styles/prospect-tokens.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+ * The layout was drawn for a large monitor and reads oversized on a laptop.
+ * From 1024px up to 1600px wide the whole page renders at 80%; a monitor keeps
+ * 100%, and phones and tablets are left alone so their text does not shrink. `zoom` scales
+ * everything uniformly — px, rem, images, sticky offsets — unlike a root
+ * font-size change, which misses anything sized in px.
+ */
+@media (min-width: 1024px) and (max-width: 1599.98px) {
+  html {
+    zoom: 0.8;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }
