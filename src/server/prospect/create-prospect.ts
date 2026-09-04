@@ -6,10 +6,10 @@ import { hubspotContactIdFrom } from "@/utils/hubspot-contact-url";
 import { prospectUrlFor } from "@/utils/prospect-url";
 import { sdrCalendarHref } from "@/utils/sdr-roster";
 import type { SelectionMode as FormMode } from "@/lib/prospect-options";
-import { findSelectables } from "./catalog";
+import { selectableEntries } from "@/content/catalog";
 import { buildUniqueSlug } from "./slug";
 
-/** One or more selected slugs matched no active row. Reported on the form. */
+/** One or more selected slugs matched no offered catalog entry. Reported on the form. */
 export class UnknownSelectionError extends Error {
   constructor(public readonly slugs: string[]) {
     super(`Unknown or inactive selections: ${slugs.join(", ")}`);
@@ -26,12 +26,12 @@ const MODE_TO_DB: Record<FormMode, SelectionMode> = {
 /**
  * "Generate", as a database operation and nothing else:
  *
- *   resolve the selected rows → mint a slug → seed the CTA → create the prospect
- *   with its selection rows in one transaction → write the tracking log row.
+ *   resolve the selected slugs against the catalog → mint a slug → seed the CTA
+ *   → create the prospect → write the tracking log row.
  *
- * No content is copied. The prospect references the Category / PainPoint rows,
- * and each of those references its Section; the page reads the content from
- * there at render time, so a fix to a section reaches every prospect at once.
+ * No content is copied. The prospect stores the catalog slugs it chose, and the
+ * page reads each one's section from the catalog (code, not a table) at render
+ * time, so a fix to a section reaches every prospect at once.
  *
  * Throws on failure — the calling action classifies the error, because only it
  * knows how to phrase the message for the SDR.
@@ -52,7 +52,7 @@ export async function createProspect(input: {
    */
   owner: { email: string; name: string };
 }): Promise<{ id: string; slug: string }> {
-  const rows = await findSelectables(input.mode, input.selections);
+  const rows = selectableEntries(input.mode, input.selections);
 
   const found = new Set(rows.map((row) => row.slug));
   const missing = input.selections.filter((slug) => !found.has(slug));
@@ -65,8 +65,6 @@ export async function createProspect(input: {
   );
 
   const cta = defaultCta(sdrCalendarHref(input.owner.email));
-
-  const ids = rows.map((row) => row.id);
 
   // Only the id is kept, not the URL it came from. The id is what the CRM API
   // takes; the rest of that URL is a portal id identical on every row plus a
@@ -92,14 +90,8 @@ export async function createProspect(input: {
       ctaDescription: cta.description,
       ctaButtonText: cta.buttonText,
       ctaUrl: cta.url,
-      // Only the join table for the chosen mode is written; the other stays empty.
-      ...(input.mode === "category"
-        ? { categories: { create: ids.map((categoryId) => ({ categoryId })) } }
-        : {
-            painPoints: {
-              create: ids.map((painPointId) => ({ painPointId })),
-            },
-          }),
+      // In catalog order, whatever order the boxes were ticked in.
+      selections: rows.map((row) => row.slug),
     },
     select: { id: true, slug: true, name: true, email: true },
   });

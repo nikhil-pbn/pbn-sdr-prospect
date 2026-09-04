@@ -4,12 +4,19 @@ import {
   type SectionContent,
 } from "@/types/section-content";
 
-/** One selectable and the section that answers it, as the seed writes them. */
-export type SeedEntry = {
+/** One selectable and the section that answers it. */
+export type CatalogEntry = {
+  /** Stable key — what a prospect stores. Never renamed once a prospect may hold it. */
   slug: string;
   name: string;
+  /** Explicit position in the rendered prospect — never array position. */
   sortOrder: number;
   content: SectionContent;
+  /**
+   * Hidden from the form, still rendered for prospects that already chose it.
+   * The catalog's alternative to deleting: a page that was sent must keep working.
+   */
+  retired?: boolean;
 };
 
 /** Grid items with a real name and no line yet. */
@@ -43,7 +50,7 @@ export function pending(input: {
   title?: string;
   subtitle?: string;
   blocks?: SectionBlock[];
-}): SeedEntry {
+}): CatalogEntry {
   return {
     slug: input.slug,
     name: input.name,

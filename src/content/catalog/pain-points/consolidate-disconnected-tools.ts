@@ -4,7 +4,7 @@ import { cap, problemCard, tile } from "./card";
  * Consolidate Disconnected Tools — pain point, sortOrder 9.
  *
  * COPY STATUS: authored — transcribed verbatim from the template card supplied
- * on 2026-09-04. Edit here, then `npm run db:seed`.
+ * on 2026-09-04. Edit here; the change ships with the next deploy.
  */
 export const CONSOLIDATE_DISCONNECTED_TOOLS = problemCard({
   slug: "consolidate-disconnected-tools",

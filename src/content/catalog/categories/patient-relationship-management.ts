@@ -1,25 +1,25 @@
-import type { SeedEntry } from "../shared";
+import type { CatalogEntry } from "../shared";
 
 /**
- * Operational Efficiency — category, sortOrder 4.
+ * Patient Relationship Management — category, sortOrder 3.
  *
  * COPY STATUS: authored — transcribed verbatim from the template card supplied
  * on 2026-09-03.
  *
- * Edit here, then `npm run db:seed` to publish the change. The body is an
+ * Edit here; the change ships with the next deploy. The body is an
  * ordered list of blocks — text, inline, tiles, grid, bullets — each with its
  * own heading (empty for none); reorder or drop blocks freely. Field limits are
  * in src/types/section-content.ts.
  */
-export const OPERATIONAL_EFFICIENCY: SeedEntry = {
-  slug: "operational-efficiency",
-  name: "Operational Efficiency",
-  sortOrder: 4,
+export const PATIENT_RELATIONSHIP_MANAGEMENT: CatalogEntry = {
+  slug: "patient-relationship-management",
+  name: "Patient Relationship Management",
+  sortOrder: 3,
   content: {
-    eyebrow: "Operational Efficiency Solution",
-    title: "Reduce Administrative Work Across the Practice",
+    eyebrow: "Patient Relationship Management Solution",
+    title: "Keep Patients Engaged Before, Between, and After Visits",
     subtitle:
-      "Standardize daily work, digitize patient intake, and automate repetitive processes that slow the team down.",
+      "Connect reminders, conversations, follow-up, and patient access so fewer opportunities fall through the cracks.",
     blocks: [
       {
         type: "inline",

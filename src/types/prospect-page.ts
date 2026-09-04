@@ -4,7 +4,7 @@ import type { CtaInput } from "@/server/validation/cta-input";
 /**
  * Everything the prospect page renders that VARIES per prospect. The fixed
  * parts — header, hero copy, testimonials, footer — are constants the renderer
- * reads directly (`content/static-sections.ts`), so they are not carried here.
+ * reads directly (`content/`), so they are not carried here.
  *
  * The same object feeds the public `/[slug]` page and the editor's preview. The
  * two differ only in where it comes from: the stored row there, and here, the
@@ -14,9 +14,10 @@ import type { CtaInput } from "@/server/validation/cta-input";
 export type ProspectCta = CtaInput;
 
 export type ProspectPageSection = {
-  /** The Section row's id — the React key, and a stable anchor. */
-  id: string;
-  /** The selectable's slug, for anchors and for tests. */
+  /**
+   * The catalog entry's slug — the React key and the anchor. Stable because the
+   * catalog never removes or renames an entry a prospect may hold.
+   */
   slug: string;
   /** The selectable's name as the SDR picked it — "PbN Voice", not the card's title. */
   name: string;

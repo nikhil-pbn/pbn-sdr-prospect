@@ -44,11 +44,11 @@ export function SelectionListField({
   if (list.length === 0) {
     return (
       <div className="rounded-xl border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-        Nothing to choose from yet — the catalog hasn&apos;t been seeded. Run{" "}
+        Nothing to choose from — every entry in this list is retired in{" "}
         <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-          npm run db:seed
+          src/content/catalog
         </code>
-        , then reload.
+        .
       </div>
     );
   }

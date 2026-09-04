@@ -23,7 +23,7 @@ export function EditorDbError({ detail }: { detail: string }) {
   );
 }
 
-/** A section's stored content predates a schema change, so the page can't render it. */
+/** A slug this prospect stored is no longer in the catalog, so the page can't render it. */
 export function EditorSchemaError({ problem }: { problem: SchemaProblem }) {
   return (
     <Frame>
@@ -34,18 +34,21 @@ export function EditorSchemaError({ problem }: { problem: SchemaProblem }) {
         />
         <div>
           <p className="font-medium text-foreground">
-            One of this prospect&apos;s sections doesn&apos;t match the current
-            content schema
+            One of this prospect&apos;s sections is missing from the catalog
           </p>
           <p className="mt-1 text-muted-foreground">
             {problem.path}: {problem.detail}
           </p>
           <p className="mt-2 text-muted-foreground">
-            The section was probably written before a schema change. Re-run{" "}
+            A catalog entry this prospect selected has been removed from{" "}
             <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
-              npm run db:seed
+              src/content/catalog
+            </code>
+            . Entries are retired, never deleted — restore it with{" "}
+            <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+              retired: true
             </code>{" "}
-            to rewrite the predefined sections.
+            and redeploy.
           </p>
         </div>
       </div>

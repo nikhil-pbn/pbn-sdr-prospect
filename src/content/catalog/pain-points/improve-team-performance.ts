@@ -4,7 +4,7 @@ import { cap, problemCard, tile } from "./card";
  * Improve Team Performance — pain point, sortOrder 2.
  *
  * COPY STATUS: authored — transcribed verbatim from the template card supplied
- * on 2026-09-04. Edit here, then `npm run db:seed`.
+ * on 2026-09-04. Edit here; the change ships with the next deploy.
  */
 export const IMPROVE_TEAM_PERFORMANCE = problemCard({
   slug: "improve-team-performance",

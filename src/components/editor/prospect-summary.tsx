@@ -54,7 +54,7 @@ export function ProspectSummary({
           </li>
         ))}
         {sections.map((section) => (
-          <li key={section.id} className="font-medium">
+          <li key={section.slug} className="font-medium">
             {section.name}
           </li>
         ))}

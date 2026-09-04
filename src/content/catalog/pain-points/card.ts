@@ -1,4 +1,4 @@
-import type { SeedEntry } from "../shared";
+import type { CatalogEntry } from "../shared";
 
 /**
  * The "Problem-led solution" card, as the ten pain-point templates lay it out
@@ -46,7 +46,7 @@ export function problemCard(input: {
   connected: string;
   bestFit: string;
   changes: string[];
-}): SeedEntry {
+}): CatalogEntry {
   return {
     slug: input.slug,
     name: input.name,

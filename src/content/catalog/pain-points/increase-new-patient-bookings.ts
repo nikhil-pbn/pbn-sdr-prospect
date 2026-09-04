@@ -4,7 +4,7 @@ import { cap, problemCard, tile } from "./card";
  * Increase New-Patient Bookings — pain point, sortOrder 4.
  *
  * COPY STATUS: authored — transcribed verbatim from the template card supplied
- * on 2026-09-04. Edit here, then `npm run db:seed`.
+ * on 2026-09-04. Edit here; the change ships with the next deploy.
  */
 export const INCREASE_NEW_PATIENT_BOOKINGS = problemCard({
   slug: "increase-new-patient-bookings",

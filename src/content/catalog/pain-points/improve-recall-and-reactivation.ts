@@ -5,7 +5,7 @@ import { cap, problemCard, tile } from "./card";
  *
  * COPY STATUS: authored — transcribed from the template card supplied on
  * 2026-09-04. One typographic fix: the card read "Revenue IQ ," with a space
- * before the comma. Edit here, then `npm run db:seed`.
+ * before the comma. Edit here; the change ships with the next deploy.
  */
 export const IMPROVE_RECALL_AND_REACTIVATION = problemCard({
   slug: "improve-recall-and-reactivation",

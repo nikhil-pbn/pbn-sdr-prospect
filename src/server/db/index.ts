@@ -8,13 +8,6 @@ export { Prisma } from "@/generated/prisma/client";
 export {
   HubspotSyncStatus,
   ProspectStatus,
-  SectionType,
   SelectionMode,
 } from "@/generated/prisma/enums";
-export type {
-  Category,
-  PainPoint,
-  Prospect,
-  ProspectTracking,
-  Section,
-} from "@/generated/prisma/client";
+export type { Prospect, ProspectTracking } from "@/generated/prisma/client";

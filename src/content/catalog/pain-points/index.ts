@@ -1,4 +1,4 @@
-import type { SeedEntry } from "../shared";
+import type { CatalogEntry } from "../shared";
 import { CONSOLIDATE_DISCONNECTED_TOOLS } from "./consolidate-disconnected-tools";
 import { IMPROVE_PATIENT_REVIEWS } from "./improve-patient-reviews";
 import { IMPROVE_RECALL_AND_REACTIVATION } from "./improve-recall-and-reactivation";
@@ -15,9 +15,9 @@ import { STREAMLINE_INSURANCE } from "./streamline-insurance";
  *
  * Every card follows the "Problem-led solution" layout in `./card` and was
  * transcribed from the template cards supplied on 2026-09-04. To change a
- * pain point's copy, edit its file and run `npm run db:seed`.
+ * pain point's copy, edit its file — there is no database step.
  */
-export const PAIN_POINT_SEED: SeedEntry[] = [
+export const PAIN_POINTS: CatalogEntry[] = [
   REDUCE_ADMINISTRATIVE_TASKS,
   IMPROVE_TEAM_PERFORMANCE,
   IMPROVE_RECALL_AND_REACTIVATION,

@@ -1,10 +1,9 @@
 /**
  * The two selection modes and the shape of a selectable option.
  *
- * The options themselves — the categories and pain points — live in PostgreSQL
- * (`categories`, `pain_points`) and reach the form through the page, which loads
- * them with `loadSelectionOptions`. Nothing here is a list of business names any
- * more; the seed (`server/db/seed-data`) is the one place those are written.
+ * The options themselves — the categories and pain points — are code, in
+ * `content/catalog`, and reach the form as props from the page. Nothing here is
+ * a list of business names; that folder is the one place those are written.
  *
  * `sortOrder` is explicit on every option and is the ONLY thing the rendered
  * order may come from — never insertion order, never the order the SDR ticked
@@ -73,4 +72,16 @@ export function resolveSelections<T extends SelectionOption>(
 export const STORED_MODE_LABELS: Record<"Category" | "PainPoint", string> = {
   Category: MODE_DETAILS.category.label,
   PainPoint: MODE_DETAILS.pain_point.label,
+};
+
+/**
+ * The stored mode as the form's key — which half of the catalog a prospect's
+ * `selections` are slugs from. The renderer needs this to look them up.
+ */
+export const STORED_TO_FORM_MODE: Record<
+  "Category" | "PainPoint",
+  SelectionMode
+> = {
+  Category: "category",
+  PainPoint: "pain_point",
 };

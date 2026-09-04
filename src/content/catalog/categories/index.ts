@@ -1,4 +1,4 @@
-import type { SeedEntry } from "../shared";
+import type { CatalogEntry } from "../shared";
 import { ALL_IN_ONE_DENTAL_SOFTWARE } from "./all-in-one-dental-software";
 import { BUSINESS_ANALYTICS } from "./business-analytics";
 import { PATIENT_RELATIONSHIP_MANAGEMENT } from "./patient-relationship-management";
@@ -15,9 +15,9 @@ import { PBN_AI_RECEPTIONIST } from "./pbn-ai-receptionist";
  * The order of this array is NOT what the page uses — each entry's own
  * `sortOrder` is — but keeping them aligned makes the list easy to read.
  *
- * To change a category's content, edit its file and run `npm run db:seed`.
+ * To change a category's content, edit its file — there is no database step.
  */
-export const CATEGORY_SEED: SeedEntry[] = [
+export const CATEGORIES: CatalogEntry[] = [
   ALL_IN_ONE_DENTAL_SOFTWARE,
   BUSINESS_ANALYTICS,
   PATIENT_RELATIONSHIP_MANAGEMENT,

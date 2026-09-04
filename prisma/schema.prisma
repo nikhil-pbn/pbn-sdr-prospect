@@ -7,78 +7,10 @@ datasource db {
   provider = "postgresql"
 }
 
-/// One predefined block of prospect-page content. Written by the seed, read by
-/// every prospect that selects the category or pain point mapped to it — the
-/// content lives HERE, once, and prospects reference it rather than copying it.
-///
-/// `content` is structured JSON, never HTML, and its shape is enforced by
-/// `sectionContentSchema` (src/types/section-content.ts) on every read and write.
-///
-/// No `sortOrder` on purpose: order is a property of what the SDR selects, so it
-/// lives on Category and PainPoint. A second copy here could only disagree.
-model Section {
-  id      String      @id @default(uuid()) @db.Uuid
-  /// Which kind of selectable this answers. Informational — the mapping itself
-  /// is the foreign key on Category / PainPoint.
-  type    SectionType
-  /// Stable seed key, e.g. "category:pbn-voice". Unique so the seed can upsert.
-  key     String      @unique @db.VarChar(255)
-  content Json        @db.JsonB
-  active  Boolean     @default(true)
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-
-  category  Category?
-  painPoint PainPoint?
-
-  @@map("sections")
-}
-
-/// A PbN solution the SDR can select. Exactly one Section answers it.
-model Category {
-  id        String  @id @default(uuid()) @db.Uuid
-  slug      String  @unique @db.VarChar(100)
-  name      String  @db.VarChar(255)
-  /// The ONLY source of rendered order. Explicit, never insertion order.
-  sortOrder Int     @map("sort_order")
-  active    Boolean @default(true)
-
-  sectionId String  @unique @map("section_id") @db.Uuid
-  section   Section @relation(fields: [sectionId], references: [id])
-
-  prospects ProspectCategory[]
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-
-  @@index([active, sortOrder])
-  @@map("categories")
-}
-
-/// A problem the SDR can select. Exactly one Section answers it.
-model PainPoint {
-  id        String  @id @default(uuid()) @db.Uuid
-  slug      String  @unique @db.VarChar(100)
-  name      String  @db.VarChar(255)
-  sortOrder Int     @map("sort_order")
-  active    Boolean @default(true)
-
-  sectionId String  @unique @map("section_id") @db.Uuid
-  section   Section @relation(fields: [sectionId], references: [id])
-
-  prospects ProspectPainPoint[]
-
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-
-  @@index([active, sortOrder])
-  @@map("pain_points")
-}
-
 /// One generated prospect page. Holds only what varies per prospect: who it is
 /// for, who made it, what was selected, and the CTA (the one editable block).
-/// Everything else on the page is static content or a referenced Section.
+/// Everything else on the page is code: the static header, hero and testimonials,
+/// and the catalog sections the selections point at (src/content/catalog).
 model Prospect {
   id   String @id @default(uuid()) @db.Uuid
   /// Public URL segment, e.g. "prospect-priya-patel-k7m2xq". Unique so /[slug]
@@ -98,8 +30,14 @@ model Prospect {
   /// Optional on the form; the lists and analytics show it. Null is normal.
   prospectRole String? @map("prospect_role") @db.VarChar(255)
 
-  /// Category OR PainPoint. Which of the two join tables below is populated.
+  /// Category OR PainPoint — which half of the catalog `selections` are slugs from.
   mode   SelectionMode
+  /// What the SDR ticked: catalog slugs, in catalog order. Slugs rather than ids
+  /// because the catalog is code (src/content/catalog), not a table — there is
+  /// nothing to join to, and nothing that can be removed from under a prospect
+  /// except by editing that code. Which is why a catalog entry is retired, never
+  /// deleted. Migration 20260904170759 carried the old join rows across.
+  selections String[] @default([])
   status ProspectStatus @default(Draft)
 
   /// The CTA block — the only content an SDR may edit in V1. Seeded from the
@@ -142,8 +80,6 @@ model Prospect {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  categories ProspectCategory[]
-  painPoints ProspectPainPoint[]
 
   @@index([ownerEmail])
   @@index([status, createdAt(sort: Desc)])
@@ -244,36 +180,6 @@ model ProspectAnalyticsEvent {
   /// "Active now" reads only this column, every 15 seconds, forever.
   @@index([lastSeenAt])
   @@map("prospect_analytics_events")
-}
-
-/// What the SDR ticked, kept so analytics and editing know how a prospect was
-/// built. Cascades with the prospect; a Category cannot be deleted while any
-/// prospect references it (deactivate it instead).
-model ProspectCategory {
-  prospectId String   @map("prospect_id") @db.Uuid
-  categoryId String   @map("category_id") @db.Uuid
-  prospect   Prospect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
-  category   Category @relation(fields: [categoryId], references: [id])
-
-  @@id([prospectId, categoryId])
-  @@index([categoryId])
-  @@map("prospect_categories")
-}
-
-model ProspectPainPoint {
-  prospectId  String    @map("prospect_id") @db.Uuid
-  painPointId String    @map("pain_point_id") @db.Uuid
-  prospect    Prospect  @relation(fields: [prospectId], references: [id], onDelete: Cascade)
-  painPoint   PainPoint @relation(fields: [painPointId], references: [id])
-
-  @@id([prospectId, painPointId])
-  @@index([painPointId])
-  @@map("prospect_pain_points")
-}
-
-enum SectionType {
-  Category
-  PainPoint
 }
 
 enum SelectionMode {

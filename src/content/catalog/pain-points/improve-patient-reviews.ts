@@ -7,7 +7,7 @@ import { cap, problemCard, tile } from "./card";
  * on 2026-09-04. FLAGGED: the third "shows up" bullet on the card reads
  * "Payment activity is fragmented across systems and difficult to reconcile.",
  * which is the payments card's line; transcribed as supplied, pending the
- * business's correction. Edit here, then `npm run db:seed`.
+ * business's correction. Edit here; the change ships with the next deploy.
  */
 export const IMPROVE_PATIENT_REVIEWS = problemCard({
   slug: "improve-patient-reviews",

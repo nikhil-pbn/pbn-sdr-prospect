@@ -1,4 +1,4 @@
-import type { SeedEntry } from "../shared";
+import type { CatalogEntry } from "../shared";
 
 /**
  * Dental Marketing — category, sortOrder 7.
@@ -6,12 +6,12 @@ import type { SeedEntry } from "../shared";
  * COPY STATUS: authored — transcribed verbatim from the template card supplied
  * on 2026-09-03.
  *
- * Edit here, then `npm run db:seed` to publish the change. The body is an
+ * Edit here; the change ships with the next deploy. The body is an
  * ordered list of blocks — text, inline, tiles, grid, bullets — each with its
  * own heading (empty for none); reorder or drop blocks freely. Field limits are
  * in src/types/section-content.ts.
  */
-export const DENTAL_MARKETING: SeedEntry = {
+export const DENTAL_MARKETING: CatalogEntry = {
   slug: "dental-marketing",
   name: "Dental Marketing",
   sortOrder: 7,

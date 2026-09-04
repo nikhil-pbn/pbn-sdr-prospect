@@ -1,4 +1,4 @@
-import type { SeedEntry } from "../shared";
+import type { CatalogEntry } from "../shared";
 
 /**
  * PbN AI Receptionist — category, sortOrder 10.
@@ -6,12 +6,12 @@ import type { SeedEntry } from "../shared";
  * COPY STATUS: authored — transcribed verbatim from the template card supplied
  * on 2026-09-03.
  *
- * Edit here, then `npm run db:seed` to publish the change. The body is an
+ * Edit here; the change ships with the next deploy. The body is an
  * ordered list of blocks — text, inline, tiles, grid, bullets — each with its
  * own heading (empty for none); reorder or drop blocks freely. Field limits are
  * in src/types/section-content.ts.
  */
-export const PBN_AI_RECEPTIONIST: SeedEntry = {
+export const PBN_AI_RECEPTIONIST: CatalogEntry = {
   slug: "pbn-ai-receptionist",
   name: "PbN AI Receptionist",
   sortOrder: 10,

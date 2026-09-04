@@ -5,8 +5,7 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
-    // Idempotent upserts of the predefined catalog — see src/server/db/seed.ts.
-    seed: "tsx --env-file-if-exists=.env src/server/db/seed.ts",
+    // No seed: the catalog is code (src/content/catalog), not rows.
   },
   datasource: {
     // This URL is used by the Prisma CLI only — `migrate`, `db push`, `studio`.

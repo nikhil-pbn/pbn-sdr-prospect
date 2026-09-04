@@ -4,7 +4,7 @@ import { cap, problemCard, tile } from "./card";
  * Increase Case Acceptance — pain point, sortOrder 6.
  *
  * COPY STATUS: authored — transcribed verbatim from the template card supplied
- * on 2026-09-04. Edit here, then `npm run db:seed`.
+ * on 2026-09-04. Edit here; the change ships with the next deploy.
  */
 export const INCREASE_CASE_ACCEPTANCE = problemCard({
   slug: "increase-case-acceptance",

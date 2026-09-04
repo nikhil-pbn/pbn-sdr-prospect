@@ -1,15 +1,16 @@
 import "server-only";
 import { cache } from "react";
 import { Prisma, prisma, ProspectStatus, SelectionMode } from "@/server/db";
-import { sectionContentSchema } from "@/types/section-content";
+import { catalogEntry, type CatalogEntry } from "@/content/catalog";
+import { STORED_TO_FORM_MODE } from "@/lib/prospect-options";
 import type {
   ProspectPageContent,
   ProspectPageSection,
 } from "@/types/prospect-page";
 
 /**
- * The one select every reader uses: the prospect, and whichever join table its
- * mode fills, each through to the Section that renders it.
+ * The one select every reader uses: the prospect, and the catalog slugs it
+ * ticked. No joins — the sections those slugs name are code, not rows.
  */
 const PAGE_SELECT = {
   id: true,
@@ -18,6 +19,7 @@ const PAGE_SELECT = {
   email: true,
   prospectRole: true,
   mode: true,
+  selections: true,
   status: true,
   version: true,
   ownerEmail: true,
@@ -28,65 +30,53 @@ const PAGE_SELECT = {
   ctaUrl: true,
   publishedAt: true,
   hubspotContactId: true,
-  categories: {
-    select: {
-      category: {
-        select: { slug: true, name: true, sortOrder: true, section: true },
-      },
-    },
-  },
-  painPoints: {
-    select: {
-      painPoint: {
-        select: { slug: true, name: true, sortOrder: true, section: true },
-      },
-    },
-  },
 } as const;
 
 /** A prospect row shaped by PAGE_SELECT — what both readers below hand to assemblePage. */
 type Row = Prisma.ProspectGetPayload<{ select: typeof PAGE_SELECT }>;
 
+/** Which stored slug could not be rendered, and why. */
 export type SchemaProblem = { path: string; detail: string };
 
 /**
- * Turns a row into what the page renders. Sections come out in `sortOrder` —
- * the selectable's, the only order there is — and each one's JSON is PARSED, not
- * cast, so a row written by an older shape is reported rather than crashing the
- * page. Returns the first problem instead of content when one is found.
+ * Turns a row into what the page renders. Each stored slug is looked up in the
+ * catalog, and the sections come out in the catalog's `sortOrder` — the
+ * selectable's, the only order there is.
+ *
+ * A slug the catalog no longer knows is reported rather than skipped. A page
+ * quietly missing one of its sections is exactly the kind of wrong nobody
+ * notices; a clear message — and, for the public page, a 404 with the reason
+ * logged — is not. The catalog's rule (retire an entry, never remove it) is
+ * what keeps this branch from running.
+ *
+ * The content itself is not re-validated here: the catalog checks every entry
+ * against the schema once, when it loads.
  */
 export function assemblePage(
   row: Row,
 ):
   | { ok: true; content: ProspectPageContent }
   | { ok: false; problem: SchemaProblem } {
-  const selectables =
-    row.mode === SelectionMode.Category
-      ? row.categories.map((join) => join.category)
-      : row.painPoints.map((join) => join.painPoint);
+  const mode = STORED_TO_FORM_MODE[row.mode];
 
-  const sections: ProspectPageSection[] = [];
-  for (const item of [...selectables].sort(
-    (a, b) => a.sortOrder - b.sortOrder,
-  )) {
-    const parsed = sectionContentSchema.safeParse(item.section.content);
-    if (!parsed.success) {
-      const issue = parsed.error.issues[0];
+  const entries: CatalogEntry[] = [];
+  for (const slug of row.selections) {
+    const entry = catalogEntry(mode, slug);
+    if (!entry) {
       return {
         ok: false,
-        problem: {
-          path: `${item.slug}.${issue?.path.join(".") ?? ""}`,
-          detail: issue?.message ?? "did not match the schema",
-        },
+        problem: { path: slug, detail: "is not in the catalog" },
       };
     }
-    sections.push({
-      id: item.section.id,
-      slug: item.slug,
-      name: item.name,
-      content: parsed.data,
-    });
+    entries.push(entry);
   }
+  entries.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const sections: ProspectPageSection[] = entries.map((entry) => ({
+    slug: entry.slug,
+    name: entry.name,
+    content: entry.content,
+  }));
 
   return {
     ok: true,

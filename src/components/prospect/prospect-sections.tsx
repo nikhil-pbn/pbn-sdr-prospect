@@ -17,7 +17,11 @@ export function ProspectSections({
     <div className="px-6 py-4">
       <ProspectContainer className="space-y-16">
         {sections.map((section, index) => (
-          <section key={section.id} id={section.slug} className="scroll-mt-20">
+          <section
+            key={section.slug}
+            id={section.slug}
+            className="scroll-mt-20"
+          >
             <ProspectSection
               slug={section.slug}
               content={section.content}

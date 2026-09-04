@@ -8,15 +8,13 @@ import {
 } from "@/components/home/recent-prospects";
 import { SignInGate } from "@/components/auth/sign-in-gate";
 import { NoSdrAccess } from "@/components/auth/no-sdr-access";
-import { DbUnreachableNotice } from "@/components/notices/db-unreachable-notice";
 import { getCurrentUser } from "@/server/auth/current-user";
 import { canCreateProspects } from "@/server/auth/sdr-team";
 import { isAdmin } from "@/server/auth/admin";
-import { loadSelectionOptions } from "@/server/prospect/catalog";
-import type { SelectionOptions } from "@/lib/prospect-options";
+import { catalogOptions } from "@/content/catalog";
 import { PAGE_WIDTHS } from "@/utils/page-width";
 
-/** Reads the session cookie and the catalog on every request, so never prerendered. */
+/** Reads the session cookie on every request, so never prerendered. */
 export const dynamic = "force-dynamic";
 
 export default async function HomePage(props: PageProps<"/">) {
@@ -37,17 +35,11 @@ export default async function HomePage(props: PageProps<"/">) {
     return <NoSdrAccess email={user.email} />;
   }
 
-  // The categories and pain points come from the database. A stopped database
-  // is the commonest local failure, so it gets its own message, not a crash.
   const admin = isAdmin(user.email);
 
-  let options: SelectionOptions | null = null;
-  let dbError: string | null = null;
-  try {
-    options = await loadSelectionOptions();
-  } catch (error) {
-    dbError = error instanceof Error ? error.message : String(error);
-  }
+  // The categories and pain points are code (content/catalog), so the form needs
+  // no database to render. A stopped database only affects the list below it.
+  const options = catalogOptions();
 
   return (
     <div className="min-h-full w-full bg-muted/40">
@@ -57,14 +49,10 @@ export default async function HomePage(props: PageProps<"/">) {
         <HomeHero />
 
         <section className="rounded-2xl border bg-card p-6 shadow-sm sm:p-8">
-          {options ? (
-            <ProspectForm
-              sdr={{ name: user.name, email: user.email }}
-              options={options}
-            />
-          ) : (
-            <DbUnreachableNotice className="" detail={dbError ?? undefined} />
-          )}
+          <ProspectForm
+            sdr={{ name: user.name, email: user.email }}
+            options={options}
+          />
         </section>
 
         <section className="mt-20">

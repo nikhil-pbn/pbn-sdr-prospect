@@ -9,8 +9,8 @@ Next.js 16 (App Router) · TypeScript · Tailwind v4 · shadcn/ui · Google OAut
 Prisma 7 · PostgreSQL
 
 **There is no AI anywhere in this application.** "Generate" is a deterministic
-database operation: each selected category or pain point resolves to one
-predefined section, and the page is `Header → Hero → [selected sections, in
+lookup: each selected category or pain point resolves to one predefined
+section, and the page is `Header → Hero → [selected sections, in
 sortOrder] → Testimonials → CTA`. No model, no prompts, no transcripts.
 
 The product, auth and publishing philosophy mirror **PbN Proposals**
@@ -43,7 +43,6 @@ cp .env.example .env       # then fill in the secrets — see the table below
 
 npm run db:up              # start Postgres (first run downloads postgres:18)
 npm run db:deploy          # apply the migrations
-npm run db:seed            # the categories, pain points and their sections
 
 npm run dev                # http://localhost:3000
 ```
@@ -82,7 +81,6 @@ not an env var.
 | `npm run db:down`      | Stop it, keeping the data                  |
 | `npm run db:migrate`   | `prisma migrate dev` — new migration       |
 | `npm run db:deploy`    | `prisma migrate deploy` — apply migrations |
-| `npm run db:seed`      | Upsert the predefined catalog (idempotent) |
 | `npm run db:check`     | Counts and the latest prospects            |
 | `npm run db:studio`    | Prisma Studio                              |
 
@@ -93,17 +91,16 @@ not an env var.
 ```
 SDR form ─► generateProspect (Server Action)
               ├─ session → owner_email, owner_name        (never from the form)
-              ├─ selected slugs → Category / PainPoint rows (unknown → field error)
+              ├─ selected slugs → catalog entries               (unknown → field error)
               ├─ slug: prospect-<name>-<6 random>
               ├─ CTA defaults + the SDR's calendar link
-              └─ INSERT prospects + prospect_categories | prospect_pain_points
+              └─ INSERT prospects (selections = the slugs, in catalog order)
                     ─► redirect /editor/[id]
 ```
 
-Section content is **never copied**. A prospect references Category/PainPoint
-rows; each references one `sections` row; the page reads the content at render
-time and orders it by the selectable's `sort_order`. Fixing a section fixes
-every prospect.
+Section content is **never copied**. A prospect stores the slugs it chose; the
+page looks each one up in the catalog (code, not a table) at render time and
+orders them by the entry's `sortOrder`. Fixing a section fixes every prospect.
 
 The **editor** edits the CTA only (title, description, button text, calendar
 link) and previews the exact page with the same renderer the public route uses.
@@ -202,15 +199,11 @@ Another SDR's prospect opens read-only in the editor; the actions refuse writes.
 ## Database
 
 ```
-sections              type · key (unique) · content JSONB · active
-categories            slug · name · sort_order · active · section_id (1:1)
-pain_points           slug · name · sort_order · active · section_id (1:1)
 prospects             slug · owner_email · owner_name · name · email · prospect_role · mode
+                      selections TEXT[] (catalog slugs, in catalog order)
                       status · cta_* · version · published_at · last_viewed_at
                       hubspot_contact_id · hubspot_status · hubspot_synced_at · hubspot_error
                       tracking_confirmed_at
-prospect_categories   prospect_id · category_id
-prospect_pain_points  prospect_id · pain_point_id
 prospect_tracking     sdr_name · prospect_name · prospect_email · prospect_url · created_at
                       (no foreign key — survives a prospect being removed)
 prospect_analytics_events
@@ -219,7 +212,7 @@ prospect_analytics_events
                       (one row per visit; unique on session_id + prospect_id; no foreign key)
 ```
 
-`sections.content` is structured JSON validated by `sectionContentSchema`
+Each catalog entry's `content` is structured JSON validated by `sectionContentSchema`
 ([`src/types/section-content.ts`](src/types/section-content.ts)): a header
 (eyebrow, title, subtitle) and an ordered list of **blocks** — `text`,
 `inline` (pipe- or bullet-separated line), `tiles` (See / Understand / Act),
@@ -227,11 +220,14 @@ prospect_analytics_events
 heading. The layout of a card is therefore data: the standard card and the
 All-in-One card differ only in their block lists.
 
-Seed data lives in [`src/server/db/seed-data/`](src/server/db/seed-data/): one
-file per category under `categories/` and one per pain point under `pain-points/`
-(all ten transcribed from the supplied cards). Edit a file, run
-`npm run db:seed`. A section whose copy is not final carries a visible
-`[Copy pending]` marker, and the seed lists them.
+The **catalog is code**, not tables: [`src/content/catalog/`](src/content/catalog/)
+holds one file per category under `categories/` and one per pain point under
+`pain-points/` (all ten transcribed from the supplied cards), validated once
+when the server starts. Edit a file and deploy; there is no seed step. A
+prospect stores the slugs it chose, so an entry a prospect may have used is
+**retired** (`retired: true`, which hides it from the form) and never deleted
+or renamed. A section whose copy is not final carries a visible
+`[Copy pending]` marker.
 
 ## Layout
 
@@ -251,7 +247,7 @@ src/
 │   ├── analytics/            tracker, range filter, view tabs, summary cards, breakdown tables
 │   ├── home/                 the form and its fields, recent prospects
 │   ├── auth/ · brand/ · notices/ · ui/
-├── content/                  static hero, stats, testimonials, CTA defaults
+├── content/                  static hero, stats, testimonials, CTA defaults · catalog/ (categories, pain points)
 ├── hooks/                    editor state, publish flow, the page tracker
 ├── lib/                      selection modes, cn()
 ├── server/
@@ -261,7 +257,7 @@ src/
 │   ├── tracking/             the SDR tracking log
 │   ├── analytics/            ingestion (visitor cookies, one-row-per-visit upsert), queries, gate
 │   ├── validation/           Zod schemas (form input, CTA, analytics event)
-│   └── db/                   Prisma singleton, seed, inspect
+│   └── db/                   Prisma singleton, inspect
 ├── types/                    section content schema, page content
 └── utils/                    URLs, SDR roster, date ranges (IST), sorting, pagination
 ```
